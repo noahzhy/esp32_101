@@ -11,11 +11,15 @@ There are four parts in this library:
 4. **Optional Projects**: As you know the basics, you can explore more advanced projects that involve connecting to the internet, using cloud services, and building IoT applications via MQTT and HTTP, or some cloud services like Blynk, Adafruit IO, and ThingSpeak.
 
 ## Contents
-
-| Chapter       | Section         | Description          |
-|---------------|-----------------|----------------------|
-| Chapter 1: Introduction | Section 1: Why ESP32? | Overview of why the ESP32 is a great choice for learning. |
-| Chapter 2: Getting Started | Section 1: LED Morse | Learn how to use the ESP32 to blink an LED in Morse code. |
+| Chapter                       | Section                   | Description                                                   |
+|-------------------------------|---------------------------|---------------------------------------------------------------|
+| Chapter 1: Introduction       | Section 1: Why ESP32?     | Overview of why the ESP32 is a great choice for learning.     |
+|                               | Section 2: Setting Up     | Guide to setting up the ESP32 development environment.        |
+|                               | Section 3: Empty          | Introduction to structure code and basic concepts.            |
+| Chapter 2: Getting Started    | Section 1: LED Morse      | Learn how to use the ESP32 to blink an LED in Morse code.     |
+| Chapter 3: Advanced Projects  | Section 1: TinyML         | Explore machine learning on the ESP32 with tinyML.            |
+|                               | Section 2: Chat with GPT  | Learn how to use the ESP32 to chat with GPT or Google Gemini. |
+| Chapter 4: Optional Projects  | Section 1: IoT with MQTT  | Learn how to connect the ESP32 to the internet using MQTT.    |
 
 ## Q & A
 <details>
