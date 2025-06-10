@@ -18,8 +18,6 @@ const char* ssid = "esp32";       // Replace with your Wi-Fi network name
 const char* password = "esp32_101"; // Replace with your Wi-Fi password
 
 // --- UDP Configuration ---
-// IMPORTANT: Replace with the IP address and port of the receiving device
-IPAddress recipientIP(192, 168, 0, 140);
 const int udpPort = 3600;
 WiFiUDP udp;
 char udpBuffer[64]; // buffer for incoming UDP packets
@@ -29,6 +27,30 @@ void blinkLED(int duration) {
     digitalWrite(LED_BUILTIN, HIGH); // Use your defined HIGH
     delay(duration);
     digitalWrite(LED_BUILTIN, LOW);  // Use your defined LOW
+}
+
+void displayMorse(char c) {
+    c = toupper(c); // convert to uppercase
+    int index = -1;
+
+    if (c >= 'A' && c <= 'Z') {
+        index = c - 'A';
+    } else if (c >= '0' && c <= '9') {
+        index = c - '0' + 26;
+    }
+
+    if (index != -1) {
+        const char* morseCode = morseTable[index];
+        for (int i = 0; morseCode[i] != '\0'; i++) {
+            if (morseCode[i] == '.') {
+                blinkLED(200); // short blink
+            } else if (morseCode[i] == '-') {
+                blinkLED(600); // long blink
+            }
+            delay(200); // dot or dash interval
+        }
+        delay(800); // character interval
+    }
 }
 
 void setup() {
@@ -70,34 +92,10 @@ void setup() {
         }
     }
 
-    // 启动UDP监听
+    // start UDP
     udp.begin(udpPort);
     Serial.print("UDP listening on port ");
     Serial.println(udpPort);
-}
-
-void displayMorse(char c) {
-    c = toupper(c); // convert to uppercase
-    int index = -1;
-
-    if (c >= 'A' && c <= 'Z') {
-        index = c - 'A';
-    } else if (c >= '0' && c <= '9') {
-        index = c - '0' + 26;
-    }
-
-    if (index != -1) {
-        const char* morseCode = morseTable[index];
-        for (int i = 0; morseCode[i] != '\0'; i++) {
-            if (morseCode[i] == '.') {
-                blinkLED(200); // short blink
-            } else if (morseCode[i] == '-') {
-                blinkLED(600); // long blink
-            }
-            delay(200); // dot or dash interval
-        }
-        delay(800); // character interval
-    }
 }
 
 void loop() {
