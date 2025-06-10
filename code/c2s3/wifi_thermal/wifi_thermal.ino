@@ -156,7 +156,6 @@ void Task1(void* parameter) {
         while (1)
             ;
     }
-    Serial.println("MLX90640 online!");
 
     // Get device parameters - We only have to do this once
     int status;
@@ -170,8 +169,7 @@ void Task1(void* parameter) {
     if (status != 0) {
         Serial.println("Parameter extraction failed");
     }
-    // MLX90640_SetRefreshRate(MLX90640_address, 0x05); // for 8  fps
-    MLX90640_SetRefreshRate(MLX90640_address, 0x06); // for 16 fps
+    MLX90640_SetRefreshRate(MLX90640_address, 0x05); // for 8 fps
     Wire.setClock(1000000L);
     float mlx90640Background[768];
     // const TickType_t xDelay = 125 / portTICK_PERIOD_MS;  // Corrected for 8Hz (1000ms / 8 = 125ms)
@@ -204,7 +202,7 @@ void Task1(void* parameter) {
         /* time to block the task until the queue has free space */
         const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
         xQueueSendToFront(xQueue, &mlx90640Background, xTicksToWait);
-        const TickType_t xDelay = 20 / portTICK_PERIOD_MS; // 8 Hz is 1/8 second
+        const TickType_t xDelay = 10 / portTICK_PERIOD_MS; // 8 Hz is 1/8 second
         vTaskDelay(xDelay);
     }
 }
