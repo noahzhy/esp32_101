@@ -17,6 +17,7 @@ There are four parts in this library:
 |                               | Section 2: Setting Up     | Guide to setting up the ESP32 development environment.        |
 |                               | Section 3: Empty          | Introduction to structure code and basic concepts.            |
 | Chapter 2: Getting Started    | Section 1: LED Morse      | Learn how to use the ESP32 to blink an LED in Morse code.     |
+|                               | Section 2: WiFi LED Morse | Integrate Wi-Fi functionality to control the LED via UDP.     |
 | Chapter 3: Advanced Projects  | Section 1: TinyML         | Explore machine learning on the ESP32 with tinyML.            |
 |                               | Section 2: Chat with GPT  | Learn how to use the ESP32 to chat with GPT or Google Gemini. |
 | Chapter 4: Optional Projects  | Section 1: IoT with MQTT  | Learn how to connect the ESP32 to the internet using MQTT.    |

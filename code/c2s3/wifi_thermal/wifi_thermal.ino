@@ -234,7 +234,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
             IPAddress ip = webSocket.remoteIP(num);
             Serial.println("Socket Connected.");
             // send message to client
-            webSocket.sendTXT(num, "Connected");
+            webSocket.sendTXT(num, "{\"message\":\"Connected\"}");
         } break;
         case WStype_TEXT:
             // send message to client
