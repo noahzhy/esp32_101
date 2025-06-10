@@ -210,9 +210,9 @@
     connection.onmessage = function (e) {
         try {
             const jsonData = JSON.parse(e.data);
-            // Assuming the compressed data string is under a key, e.g., "data"
-            // Adjust "data" if the key is different in your ESP32 JSON output.
-            const compressedString = jsonData.data; 
+            // Assuming the compressed data string is under a key, e.g., "thermalData"
+            // Adjust "thermalData" if the key is different in your ESP32 JSON output.
+            const compressedString = jsonData.thermalData; 
 
             if (typeof compressedString !== 'string' || compressedString.length < 10) { // Basic check for the compressed string
                 console.error("Compressed data in JSON is invalid or too short:", compressedString);
