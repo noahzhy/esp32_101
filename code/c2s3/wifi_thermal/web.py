@@ -1,6 +1,7 @@
 import re
 import json
 import asyncio
+import time
 
 import cv2
 import websockets
@@ -21,7 +22,36 @@ MAX_TEMP = 40.0
 # Global variable to control the main loop execution
 running = True
 
+# FPS calculation variables
+frame_count = 0
+fps = 0.0
+fps_start_time = time.time()
 
+# Precompile run-length encoding pattern and difference map for performance
+RLE_PATTERN = re.compile(r"(\d*)(\D)")
+POSITIVE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+NEGATIVE_CHARS = "abcdefghijklmnopqrstuvwxyz"
+DIFF_MAP = {p: i for i, p in enumerate(POSITIVE_CHARS)}
+DIFF_MAP.update({n: -i for i, n in enumerate(NEGATIVE_CHARS) if i > 0})
+
+
+from time import perf_counter
+
+def time_it(func):
+    """
+    Decorator to measure the execution time of a function.
+    Prints the time taken to execute the function.
+    """
+    def wrapper(*args, **kwargs):
+        start_time = perf_counter()
+        result = func(*args, **kwargs)
+        end_time = perf_counter()
+        print(f"Function '{func.__name__}' executed in {(end_time - start_time) * 1000:.4f} ms")
+        return result
+    return wrapper
+
+
+@time_it
 def decode_thermal_data(compressed_data: str) -> np.ndarray:
     """
     Decodes a compressed string from the ESP32 and MLX90640 thermal camera firmware.
@@ -36,38 +66,31 @@ def decode_thermal_data(compressed_data: str) -> np.ndarray:
     """
     data_str = ""
     try:
-        data_str = json.loads(compressed_data)['data']
+        data_str = compressed_data
     except (json.JSONDecodeError, KeyError, TypeError):
-        print(f"Warning: Could not parse message as JSON: {compressed_data[:100]}")
+        print(f"Error decoding data: {compressed_data}")
         return np.array([])
 
     try:
         header_end_pos = data_str.find('.')
-        if header_end_pos == -1: return np.array([])
+        if header_end_pos == -1:
+            print(f"Error: Header not found in data: {data_str}")
+            return np.array([])
         num_decimals = int(data_str[0])
         accuracy = int(data_str[1])
         initial_scaled_value = int(data_str[2:header_end_pos])
         encoded_data = data_str[header_end_pos + 1:]
     except (ValueError, IndexError):
+        print(f"Error parsing header from data: {data_str}")
         return np.array([])
 
-    expanded_chars, num_buffer = [], ""
-    for char in encoded_data:
-        if char.isdigit():
-            num_buffer += char
-        else:
-            expanded_chars.extend([char] * int(num_buffer if num_buffer else 1))
-            num_buffer = ""
-
-    if len(expanded_chars) != 767:
-        print(f"Warning: Expected 767 decoded characters, but got {len(expanded_chars)}.")
-
-    positive = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    negative = "abcdefghijklmnopqrstuvwxyz"
-    diff_map = {p_char: i for i, p_char in enumerate(positive)}
-    diff_map.update({n_char: -i for i, n_char in enumerate(negative) if i > 0})
-
-    diff_indices = [diff_map.get(char, 0) for char in expanded_chars]
+    # Efficient run-length decoding using precompiled regex
+    diff_indices = []
+    for count_str, char in RLE_PATTERN.findall(encoded_data):
+        count = int(count_str) if count_str else 1
+        diff_indices.extend([DIFF_MAP.get(char, 0)] * count)
+    if len(diff_indices) != 767:
+        print(f"Warning: Expected 767 decoded values, but got {len(diff_indices)}.")
 
     temperatures = np.zeros(768, dtype=np.float32)
     power_of_10 = 10**num_decimals
@@ -79,7 +102,7 @@ def decode_thermal_data(compressed_data: str) -> np.ndarray:
     for x in range(1, 768):
         if x - 1 >= len(diff_indices): break
         diff_index = diff_indices[x - 1]
-        
+
         if x % column_count == 0:
             ref_temp = temperatures[x - column_count]
             scaled_ref = round(ref_temp * power_of_10)
@@ -90,18 +113,19 @@ def decode_thermal_data(compressed_data: str) -> np.ndarray:
         current_scaled_value = reference_value + diff_index * accuracy
         temperatures[x] = current_scaled_value / power_of_10
         processed_previous_value = current_scaled_value
-        
+
     return temperatures
 
 
-def update_display_cv2(data: str):
+@time_it
+def update(data: str):
     """Decodes, processes, and displays the thermal map using OpenCV"""
-    global running
+    global running, frame_count, fps, fps_start_time
 
     # 1. Decode data
     temperatures = decode_thermal_data(data)
     if temperatures.size != 768:
-        print("Error: Decoded temperature data size is incorrect.")
+        print(f"Error: Decoded temperature data size is incorrect, got {temperatures.size}, expected 768.")
         return
     
     # Reshape the 1D array into a 24x32 image
@@ -126,6 +150,10 @@ def update_display_cv2(data: str):
         interpolation=cv2.INTER_NEAREST # Use nearest-neighbor interpolation to preserve pixelation
     )
 
+    # Overlay FPS on the image
+    cv2.putText(resized_image, f"FPS: {fps:.2f}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
     # 5. Display the image
     cv2.imshow(WINDOW_NAME, resized_image)
 
@@ -133,7 +161,14 @@ def update_display_cv2(data: str):
     key = cv2.waitKey(1) & 0xFF
     if key == ord('q') or key == 27: # 27 is the ASCII code for ESC key
         running = False
-        print("Exit key pressed, shutting down...")
+
+    # FPS calculation
+    frame_count += 1
+    elapsed_time = time.time() - fps_start_time
+    if elapsed_time > 1.0:
+        fps = frame_count / elapsed_time
+        frame_count = 0
+        fps_start_time = time.time()
 
 
 async def listen_for_data():
@@ -148,10 +183,10 @@ async def listen_for_data():
                 try:
                     # Set a timeout to allow cv2.waitKey() to be detected
                     message = await asyncio.wait_for(websocket.recv(), timeout=0.1)
-                    update_display_cv2(message)
+                    data = eval(message)
+                    if 'data' in data:
+                        update(data['data'])
                 except asyncio.TimeoutError:
-                    # If timeout, do nothing and continue the loop, this allows us to check for key presses
-                    update_display_cv2("") # Pass an empty string to allow key press detection
                     continue
                 except websockets.exceptions.ConnectionClosed:
                     print("WebSocket connection closed.")

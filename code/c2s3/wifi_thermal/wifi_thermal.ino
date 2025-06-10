@@ -146,7 +146,7 @@ void Task1(void* parameter) {
     int tick = 0;
     const byte MLX90640_address = 0x33;  // Default 7-bit unshifted address of the MLX90640
 
-    Wire.setClock(400000L);
+    Wire.setClock(800000L);
     Wire.begin();
 
     paramsMLX90640 mlx90640;
@@ -170,7 +170,8 @@ void Task1(void* parameter) {
     if (status != 0) {
         Serial.println("Parameter extraction failed");
     }
-    MLX90640_SetRefreshRate(MLX90640_address, 0x05);
+    // MLX90640_SetRefreshRate(MLX90640_address, 0x05); // for 8  fps
+    MLX90640_SetRefreshRate(MLX90640_address, 0x06); // for 16 fps
     Wire.setClock(1000000L);
     float mlx90640Background[768];
     // const TickType_t xDelay = 125 / portTICK_PERIOD_MS;  // Corrected for 8Hz (1000ms / 8 = 125ms)
