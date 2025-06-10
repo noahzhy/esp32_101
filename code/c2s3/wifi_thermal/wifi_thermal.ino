@@ -99,46 +99,44 @@ void loop() {
 
     WiFiClient client = server.available();  // listen for incoming clients
 
-    if (client) {
-        Serial.println("New Client.");
-        String currentLine = "";
-        while (client.connected()) {
-            if (client.available()) {
-                char c = client.read();
-                Serial.write(c);
-                if (c == '\n') {
-                    // if the current line is blank, you got two newline characters in a row.
-                    // that's the end of the client HTTP request, so send a response:
-                    if (currentLine.length() == 0) {
-                        // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-                        // and a content-type so the client knows what's coming, then a blank line:
-                        client.println("HTTP/1.1 200 OK");
-                        client.println("Content-type:application/json");
-                        client.println("Connection: close"); // Advise client to close connection
-                        client.println();
-                        
-                        // Construct JSON response
-                        String jsonResponse = "{\"ipAddress\":\"";
-                        jsonResponse += WiFi.localIP().toString();
-                        jsonResponse += "\", \"message\":\"Thermal camera server is active\"}";
+    if (!client) return;  // if no client, return
 
-                        client.print(jsonResponse);
-                        client.println(); // End of JSON response body
-                        // The HTTP response ends with another blank line (already sent by previous client.println())
-                        // break out of the while loop:
-                        break;
-                    } else {  // if you got a newline, then clear currentLine:
-                        currentLine = "";
-                    }
-                } else if (c != '\r') {  // if you got anything else but a carriage return character,
-                    currentLine += c;    // add it to the end of the currentLine
+    Serial.println("New Client.");
+    String currentLine = "";
+    while (client.connected()) {
+        if (client.available()) {
+            char c = client.read();
+            Serial.write(c);
+            if (c == '\n') {
+                // if the current line is blank, you got two newline characters in a row.
+                // that's the end of the client HTTP request, so send a response:
+                if (currentLine.length() == 0) {
+                    // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+                    // and a content-type so the client knows what's coming, then a blank line:
+                    client.println("HTTP/1.1 200 OK\r\nContent-type:application/json\r\nConnection: close\r\n");
+                    client.println();
+
+                    // Construct JSON response
+                    String jsonResponse = "{\"ipAddress\":\"";
+                    jsonResponse += WiFi.localIP().toString();
+                    jsonResponse += "\", \"message\":\"Thermal camera server is active\"}";
+
+                    client.print(jsonResponse);
+                    client.println(); // End of JSON response body
+                    // The HTTP response ends with another blank line (already sent by previous client.println())
+                    // break out of the while loop:
+                    break;
+                } else {  // if you got a newline, then clear currentLine:
+                    currentLine = "";
                 }
+            } else if (c != '\r') {  // if you got anything else but a carriage return character,
+                currentLine += c;    // add it to the end of the currentLine
             }
         }
-        // close the connection:
-        client.stop();
-        Serial.println("Client Disconnected.");
     }
+    // close the connection:
+    client.stop();
+    Serial.println("Client Disconnected.");
 }
 
 // Capture thermal image on a different thread
